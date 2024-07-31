@@ -10,24 +10,28 @@ pacman::p_load(ggplot2,vegan,ape,ggeffects,gee,geepack)
 select <- dplyr::select
 
 setwd(paste0(path,"/harvard/DIRECT_PLUS/Analysis/"))
-load("/Results/DIRECT/dat_analysis.RData")
+load("/Results/Overview/dat_overview.RData")
 
-#data pre
+#data 
 gdata::keep(metadata, fmets_direct_BA, fmets_direct_BA_nm,fpmets_name,direct_tax,metadata_spe_fmets0,sure=T)
 
 int <- function(x){
   qnorm((rank(x,na.last="keep")-0.5)/sum(!is.na(x)))
 }
 
-geeglm_fun <- function(lipid_var, mets_id,df_input,form0,constr,family){
+p_23dg_anno <- function(x){
+  x <- as.numeric(x)
+  ifelse(x<0.001,'<0.001',
+         ifelse(x>=0.001 & x<0.01,'<0.01',
+                ifelse(x>=0.01,paste0('=',format(round(x,3),nsmall=3)),x)))};
+
+geeglm_fun <- function(lipid_var, mets_id,df_input,form,constr,family){
   res_fmets_out <- c()
   for (o in lipid_var){
     res_fmets <- c()
     for (m in mets_id){ 
       print(m)
       data <- df_input
-      form <- formula(paste0(o,'~',m,form0)) 
-      
       fit <- geeglm(form, id=ID, data=data,
                     corstr = corstr0,
                     family = family0);
@@ -49,15 +53,14 @@ geeglm_fun <- function(lipid_var, mets_id,df_input,form0,constr,family){
   return(res_fmets_out)
 }
 
-geeglm_fun_T <- function(lipid_var, mets_id,df_input,form0,constr,family){
+geeglm_fun_T <- function(lipid_var, mets_id,df_input,form,constr,family){
   res_fmets_out <- c()
   for (o in lipid_var){
     res_fmets <- c()
     for (m in mets_id){ #fecal_direct
       print(m)
       data <- df_input
-      
-      form <- formula(paste0(o,'~',m,form0)) 
+
       data[,m] <- cut(data[,m], 
                       breaks=c(tert[1]-10,tert[2],tert[3],tert[4]+10),
                       labels=c('T1','T2','T3'))
@@ -97,13 +100,12 @@ dat_inp[,mets_id] <- map(dat_inp[,mets_id], int)
 lipid_var <- c("BMI","Triglycerides","TC_HDL","weight","WC","Cholesterol","LDLc","HDLc")
 
 #MV1
-form0 <- '+Group2+MED_idx+age+sex+antibio+metformin+Lipid_lowering+Time';#
 corstr0 = constr; family0 = fam
-gee_fmets_baseline <- geeglm_fun(lipid_var, mets_id, dat_inp,form0,constr0,family0); 
+gee_fmets_baseline <- geeglm_fun(lipid_var, mets_id, dat_inp,form,constr0,family0); 
 gee_fmets_baseline$NAME <- factor(gee_fmets_baseline$NAME,levels=BA_name_fmets_lvl)
 #write.xlsx(gee_fmets_baseline, file = "results/GEE/GEE_lipid_var_baselineBA_MV1.xlsx") 
 
-gee_fmets_baseline_T <- geeglm_fun_T(lipid_var, c(tb2_out_BA_id), dat_inp,form0,constr0,family0); 
+gee_fmets_baseline_T <- geeglm_fun_T(lipid_var, c(tb2_out_BA_id), dat_inp,form,constr0,family0); 
 gee_fmets_baseline_T$NAME <- factors(gee_fmets_baseline_T$NAME,levels=BA_name_fmets_lvl)
 #write.xlsx(out,'results/GEE/Table_GEE_baselineBA_lipid_var_Tertile.xlsx')
 
@@ -239,7 +241,7 @@ for (n in c(1:length(show_list))){
 
 
   if (n==2){
-    p=ggplot(tem %>% filter(!!sym(ba)>=qq2[1] & !!sym(ba)<=qq2[2]),
+    p=ggplot(data,
              aes_string(x=ba,y=out))+
       geom_point(size=1,color='#4870b7')+
       geom_smooth(method=lm, size=1,alpha=0.3,
@@ -291,7 +293,7 @@ for (n in c(1:length(show_list))){
   
   
   if (n==2){
-    p=ggplot(tem %>% filter(!!sym(ba)>=qq2[1] & !!sym(ba)<=qq2[2]),
+    p=ggplot(data,
              aes_string(x=ba,y=out))+
       geom_point(size=1,color='#4870b7')+
       geom_smooth(method=lm, size=1,alpha=0.3,
@@ -341,7 +343,7 @@ for (n in c(1:length(show_list))){
   
   
   if (n==2){
-    p=ggplot(tem %>% filter(!!sym(ba)>=qq2[1] & !!sym(ba)<=qq2[2]),
+    p=ggplot(data,
              aes_string(x=ba,y=out))+
       geom_point(size=1,color='#4870b7')+
       geom_smooth(method=lm, size=1,alpha=0.3,fill='#F98F34',color='#F98F34')+
@@ -362,5 +364,3 @@ pdf('results/GEE/Line_scatter_BAs_lipids.pdf',width=10,height=15,onefile=F)
 egg::ggarrange(p1,p2,p3,nrow=3,heights=c(1,1,1))
 
 dev.off()
-
-
