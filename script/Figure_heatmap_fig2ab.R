@@ -10,7 +10,7 @@ pacman::p_load(ggplot2,vegan,ape,ggeffects,gee,geepack)
 select <- dplyr::select
 
 setwd(paste0(path,"/harvard/DIRECT_PLUS/Analysis/"))
-load("/Results/Overview/dat_overview.RData")
+load("/Results/DIRECT/dat_analysis.RData")
 
 #data pre
 gdata::keep(metadata, fmets_direct_BA, fmets_direct_BA_nm,fpmets_name,direct_tax,metadata_spe_fmets0,sure=T)
