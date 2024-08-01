@@ -5,8 +5,8 @@ load("/Results/Overview/dat_overview.RData")
 gdata::keep(metadata, fmets_direct_BA, BA_info_fmets,ba_rank,metadata_spe_fmets0,sure=T)
 
 
-#*Overview plot-------
-#*#ba 
+#Overview plot-------
+#ba 
 ba_df0 <- metadata %>% filter(time==0) %>% 
   left_join(fmets_direct_BA,by=c('sno'="CLIENT_SAMPLE_ID2",'time') ) %>% 
   left_join(species_dat[,c('Sample_ID','s__Prevotella_copri')]) %>% as.data.frame() %>% 
