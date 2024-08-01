@@ -13,9 +13,10 @@ ba_df0 <- metadata %>% filter(time==0) %>%
   select(c('Sample_ID','sno','group','BMI',BA_info_fmets$CHEM_ID2)) %>% 
   arrange(group) %>% 
   mutate(Sample_ID <- factor(Sample_ID,levels=Sample_ID),
-         Group=case_when(group==1~'HDG', group==2~'MedDiet',
-                                            group==3~'Green-MedDiet',
-                                            TRUE~as.character(group))) %>% 
+         Group=case_when(group==1~'HDG', 
+                         group==2~'MedDiet',
+                         group==3~'Green-MedDiet',
+                         TRUE~as.character(group))) %>% 
   mutate(Group=factor(Group,levels=c('HDG','MedDiet','Green-MedDiet')))
 
 #_1) Bile acids discribution--------
@@ -180,9 +181,82 @@ pdf("results/Correlation/Fig0_BA_sample.pdf",width = 10, height = 8, onefile = F
 egg::ggarrange(p_group,p_ba,blank,p_spe,ncol = 1,heights = c(0.1,2,0.05,2))
 dev.off()
 
+
+##Fig S1.Feal bile acid levels at Baseline----------
+df0=metadata %>% inner_join(fmets_direct_BA,by=c('sno'="CLIENT_SAMPLE_ID2",'time') )
+
+plots <- list()
+#first plot with y axis title--
+box1 <- ggplot(data=df0,
+               aes_string(x='Group',y=BA_info_fmets$CHEM_ID2[1],color='Group',fill='Group'))+
+  geom_boxplot(width=0.6,alpha=0.5,outlier.size = 0.5)+
+  scale_fill_manual(values=c("#728B92","#FF7F0E","#2CA02CFF"))+
+  labs(title=BA_info_fmets$NAME_ABB[1],x='',y="Bile acid levels (log10)")+
+  scale_color_manual(values=c("#728B92","#FF7F0E","#2CA02CFF"))+
+  theme_classic()+
+  theme(panel.grid = element_blank(),
+        axis.title.y = element_text(size=15),
+        axis.text.y = element_text(angle=90,size=13,hjust=0.5),
+        axis.text.x = element_blank(),
+        legend.position="none",
+        plot.title = element_text(hjust = 0,size=15)); box1
+plots[[1]] <- box1
+
+#middle plots without y axix title and x axis--
+for (n in 2:(length(BA_info_fmets$CHEM_ID2)-7)){
+  for (i in BA_info_fmets$CHEM_ID2[n]){
+    #print(i)
+    box <- ggplot(data=df0,
+                  aes_string(x='Group',y=BA_info_fmets$CHEM_ID2[n],color='Group',fill='Group'))+
+      geom_boxplot(width=0.6,alpha=0.5,outlier.size = 0.5)+
+      scale_fill_manual(values=c("#728B92","#FF7F0E","#2CA02CFF"))+
+      labs(title=BA_info_fmets$NAME_ABB[n],x='',y="")+
+      scale_color_manual(values=c("#728B92","#FF7F0E","#2CA02CFF"))+
+      theme_classic()+
+      theme(panel.grid = element_blank(),
+            axis.title.y = element_text(size=15),
+            axis.text.y = element_text(angle=90,size=13,hjust=0.5),
+            axis.text.x = element_blank(),
+            text=element_text(family='sans',size=15),
+            legend.position="none",
+            plot.title = element_text(hjust = 0,size=15)); box
+    plots[[n]] <- box
+  }
+}
+#last row with axis.text--
+for (n in (length(BA_info_fmets$CHEM_ID2)-6):(length(BA_info_fmets$CHEM_ID2))){
+  for (i in BA_info_fmets$CHEM_ID2[n]){
+    #print(i)
+    box <- ggplot(data=df0,
+                  aes_string(x='Group',y=BA_info_fmets$CHEM_ID2[n],color='Group',fill='Group'))+
+      geom_boxplot(width=0.6,alpha=0.5,outlier.size = 0.5)+
+      scale_fill_manual(values=c("#728B92","#FF7F0E","#2CA02CFF"))+
+      labs(title=BA_info_fmets$NAME_ABB[n],x='',y="")+
+      scale_color_manual(values=c("#728B92","#FF7F0E","#2CA02CFF"))+
+      theme_classic()+
+      theme(panel.grid = element_blank(),
+            axis.title.y = element_text(size=15),
+            axis.text.y = element_text(angle=90,size=13,hjust=0.5),
+            axis.text.x =element_text(size=15,angle=45,vjust=1),
+            legend.position="none",
+            plot.title = element_text(hjust = 0,size=15)); box
+    plots[[n]] <- box
+  }
+}
+
+
+lay_ba <- lay_new(
+  mat = matrix(1:42, ncol = 7),widths = rep(1,7),heights = c(1,1,1,1,1,1.5))  
+#lay_show(lay_ba)
+pdf('results/Overview/Fig_S1_fmets_Baseline_diet3g_LOG.pdf',height=30,width=30)
+lay_grid(plots,lay_ba)
+dev.off()
+
+
+
 ##Fig S5_BAs change-Time---------------------
-df=metadata %>%   inner_join(fmets_direct_BA,by=c('sno'="CLIENT_SAMPLE_ID2",'time') )
-data=metadata %>%   inner_join(fmets_direct_BA,by=c('sno'="CLIENT_SAMPLE_ID2",'time') )
+df=metadata %>% inner_join(fmets_direct_BA,by=c('sno'="CLIENT_SAMPLE_ID2",'time') )
+data=metadata %>% inner_join(fmets_direct_BA,by=c('sno'="CLIENT_SAMPLE_ID2",'time') )
 data0=copy(data) %>% filter(time==0); setnames(data0,BA_info_fmets$CHEM_ID2,paste0(BA_info_fmets$CHEM_ID2,'_0'))
 data6=copy(data) %>% filter(time==6); setnames(data6,BA_info_fmets$CHEM_ID2,paste0(BA_info_fmets$CHEM_ID2,'_6'))
 data18=copy(data) %>% filter(time==18); setnames(data18,BA_info_fmets$CHEM_ID2,paste0(BA_info_fmets$CHEM_ID2,'_18'))
@@ -283,9 +357,13 @@ box_lg <- ggplot(data=data,
         legend.text= element_text(size=15),
         legend.position="bottom",
         legend.title = element_text(size=15,face='bold')); box_lg
-pdf('results/Missing/Fig_S1_BAs_Time_LOG_legend.pdf',height=0.5,width=4)
+pdf('results/Overview/Fig_S1_BAs_Time_LOG_legend.pdf',height=0.5,width=4)
 grid::grid.draw(ggpubr::get_legend(box_lg))
 dev.off()
+
+
+
+
 
 
 
