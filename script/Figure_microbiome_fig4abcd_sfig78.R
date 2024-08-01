@@ -1,8 +1,8 @@
 ################################################################################################################################################
 #
-# Microbiome modifies the SBA pool, and the associations between fecal BAs, body adiposity, and serum lipids 
-# differ depending on the abundance of gut microbes involved in BA metabolism
-# 
+# The improvement in body adiposity and lipid profiles induced by the Mediterranean diet intervention 
+#   varied based on baseline levels of fecal bile acids.
+#
 ##############################################################################################################################################
 
 
@@ -793,3 +793,11 @@ ht <- ComplexHeatmap::pheatmap(as.matrix(dheat), name='Beta/SD',
 pdf('results/Function/Heatmap_spe_allBAs_linear.pdf',width=30,height=20)
 ht
 dev.off()
+
+
+
+
+
+
+
+
