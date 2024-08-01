@@ -2,7 +2,7 @@
 # Overview of the multi-omics data in the 18 month randomized controlled trial：
 #     fecal bilea acid, body adopisty, serum lipid biomarkers, and gut microbiome
 ############################################################################################################
-library(pacman)
+
 pacman::p_load(tidyverse,gmodels,ggplot2,ggsci,corrplot,ggdensity,venn,vegan,ape,gee,geepack)
 setwd(paste0(path,"/harvard/DIRECT_PLUS/Analysis/"))
 load("/Results/Overview/dat_overview.RData")
@@ -139,35 +139,31 @@ dev.off()
 
 
 ##-P-outcome-time--------------
-p_23dg <- function(x){ifelse(as.numeric(x)<0.001,'<0.001',
-                             ifelse(as.numeric(x)<0.01,'<0.01',
-                                    ifelse(as.numeric(x) >=0.01,
-                                           paste0('=',format(round(x,3),nsmall=3)),x)))}
 #BMI
 fit2 <- geeglm(BMI~Group*Time+age+sex+antibio+metformin+ Lipid_lowering,
                id=ID,data=metadata,
-               corstr = constr,family = 'gaussian'); summary(fit2)
+               corstr = constr,family = fam); summary(fit2)
 fit1 <- geeglm(BMI~Group+Time+age+sex+antibio+metformin+ Lipid_lowering,
                id=ID,data=metadata,
-               corstr = constr,family = 'gaussian'); summary(fit1)
+               corstr = constr,family = fam); summary(fit1)
 pt1 <- anova(fit1,fit2,test='lrtest');p_23dg(pt1$'P') #p<0.001
 
 #TG--
 fit2 <- geeglm(Triglycerides~Group*Time+age+sex+antibio+metformin+ Lipid_lowering,
                id=ID,data=metadata,
-               corstr = constr,family = 'gaussian'); summary(fit2)
+               corstr = constr,family = fam); summary(fit2)
 fit1 <- geeglm(Triglycerides~Group+Time+age+sex+antibio+metformin+ Lipid_lowering,
                id=ID,data=metadata,
-               corstr = constr,family = 'gaussian'); summary(fit1)
+               corstr = constr,family = fam); summary(fit1)
 pt2 <- anova(fit1,fit2,test='lrtest');p_23dg(pt2$'P')#p:0.046
 
 #TC_HDL
 fit2 <- geeglm(TC_HDL~Group*Time+age+sex+antibio+metformin+ Lipid_lowering,
                id=ID,data=metadata,
-               corstr = constr,family = 'gaussian'); summary(fit2)
+               corstr = constr,family = fam); summary(fit2)
 fit1 <- geeglm(TC_HDL~Group+Time+age+sex+antibio+metformin+ Lipid_lowering,
                id=ID,data=metadata,
-               corstr = constr,family = 'gaussian'); summary(fit1)
+               corstr = constr,family = fam); summary(fit1)
 pt3 <- anova(fit1,fit2,test='lrtest');p_23dg(pt3$'P')#p:<0.01
 
 
@@ -288,6 +284,8 @@ ba_lg_mean$variable <- factor(ba_lg_mean$variable,levels=ba_lg_mean$variable)
 ba_lg_mean <- ba_lg_mean[order(ba_lg_mean$SUB_PATHWAY2,ba_lg_mean$Category,ba_lg_mean$value),]
 summary(ba_lg_mean$value)
 
+
+
 col_BA_cat <- c('#6681D8D9',"#75D1C9","#ffb4a8")
 col_BA_cat2 <- c( "#F7E987","#B5CDA3","#ffb4a8") 
 p4 <- ggplot(ba_lg_mean, aes(x=variable, y=value)) + 
@@ -369,7 +367,6 @@ legend_heat <- ggplot(melted_cormat, aes(Var2, Var1, fill = value))+
         legend.text = element_text(colour = "black", size = 17),
         legend.title = element_text(colour = "black", size = 17,face="bold"))+ 
   coord_fixed(ratio=1) ;legend_heat 
-  
 pdf('results/Overview/Correlation/Cor_fmets_fmets_baseline_legend_heatmap.pdf',
     width=1.5,height=3,onefile=FALSE)
 grid::grid.draw(ggpubr::get_legend(legend_heat))
@@ -426,7 +423,7 @@ pcoa_plot1 <-ggplot(dat_pcoa_phylum,aes(x=X1,y=X2))+
         plot.title = element_text(hjust = 0,size=22),
         legend.position='none',
         axis.title=element_text(size=21)); pcoa_plot1
-        
+
 pdf("results/Correlation/Fig0_spe_Firmicutes_PCOA.pdf", height = 5.1,width = 5)
 pcoa_plot1
 dev.off()
@@ -454,7 +451,7 @@ pcoa_plot2 <-ggplot(dat_pcoa_phylum,aes(x=X1,y=X2))+
         legend.key.height =unit(0.6,'cm'),
         legend.spacing.y = unit(0.7, "cm"),
         axis.title=element_text(size=21)); #pcoa_plot2
-        
+
 pdf("results/Overview/Fig0_spe_Bacteroidetes_PCOA.pdf", height = 5.1,width = 5)
 pcoa_plot2
 dev.off()
@@ -479,6 +476,146 @@ grid.draw(ggpubr::get_legend(pcoa_lg))
 dev.off()
 
 
+#S figure time trend of outcome ---------
+df=metadata;
+data=metadata %>% mutate(TC_HDL = Cholesterol/HDLc)
+data0=copy(data) %>% filter(time==0); setnames(data0,lipid_var,paste0(lipid_var,'_0'))
+data6=copy(data) %>% filter(time==6); setnames(data6,lipid_var,paste0(lipid_var,'_6'))
+data18=copy(data) %>% filter(time==18); setnames(data18,lipid_var,paste0(lipid_var,'_18'))
 
+dfch=data0[,c('sno','Group',paste0(lipid_var,'_0'))] %>% 
+  left_join(data6[,c('sno',paste0(lipid_var,'_6'))],by='sno') %>% 
+  left_join(data18[,c('sno',paste0(lipid_var,'_18'))],by='sno')
+
+for (i in lipid_var){
+  out0=paste0(i,'_0'); out6=paste0(i,'_6'); out18=paste0(i,'_18')
+  out60=paste0(i,'_60');out180=paste0(i,'_180')
+  dfch[,out60]=log(dfch[,out6],10)-log(dfch[,out0],10)
+  dfch[,out180]=log(dfch[,out18],10)-log(dfch[,out0],10)
+}
+
+dfch2=bind_rows(dfch[,c('sno','Group',paste0(lipid_var,'_60'))] %>% mutate(time='60') %>% 
+                  setnames(c('sno','Group',lipid_var,'Time')),
+                dfch[,c('sno','Group',paste0(lipid_var,'_180'))] %>% mutate(time='180') 
+                %>% setnames(c('sno','Group',lipid_var,'Time')) )
+
+dbase=data.frame(dfch[,c('sno','Group',paste0(lipid_var,'_60'))] %>% mutate(time='00') %>% 
+                   setnames(c('sno','Group',lipid_var,'Time')))
+dbase[,lipid_var] <- apply(dbase[,lipid_var],2,function(x){x=0})
+data=bind_rows(dfch2,dbase) %>% 
+  mutate(Time=factor(Time,levels=c('00','60','180')),Group0='diet') %>% arrange(Time)
+box <- ggplot(data=data,
+              aes_string(x='Time',y='BMI',group='sno',color='Group',fill='Group'))+
+  geom_point(size=1.5)+geom_line(size=1)+
+  stat_summary(fun=mean, geom='point', size=3,aes_string(group='Group0'),color='#c03546') +
+  stat_summary(fun=mean, geom='line', size=1,aes_string(group='Group0'),color='#c03546') +
+  geom_hline(yintercept=0,color='gray60',linetype="dashed")+
+  scale_fill_manual(values=group_color)+
+  labs(title=BA_info_fmets$NAME_ABB[n],x='',y="")+
+  scale_color_manual(values=group_color)+
+  scale_x_discrete(limits = c('00','60', '180'), 
+                   breaks = c('00','60', '180'),
+                   labels=c('0mon','6-0mon', '18-0mon'))+
+  theme_classic()+
+  theme(panel.grid = element_blank(),
+        axis.title = element_blank(),
+        axis.text.y = element_text(size=15),
+        axis.text.x = element_blank(),
+        legend.position="none",
+        plot.title = element_text(size=20)); box
+
+#BMI
+out='BMI'
+data=metadata %>% mutate(TC_HDL = Cholesterol/HDLc,
+                         Time=factor(case_when(time==0~'0mon',time==6~'6mon',time==18~'18mon'),
+                                     levels=c('0mon','6mon','18mon')),
+                         Group0='diet')
+group_color <- c('#649BE7','#FF8911','#00A985')
+p1=ggplot(data,aes(x=Time,y=BMI,group=sno,color=Group,fill=Group))+
+  geom_point(size=2)+geom_line(alpha=0.9,size=1)+
+  stat_summary(fun=mean, geom='point', alpha=1,size=3,aes_string(group='Group0'),color='#c03546') +
+  stat_summary(fun=mean, geom='line', size=1,aes_string(group='Group0'),color='#c03546') + 
+  labs(y='',x='Time (Month)',title=bquote(paste(.(out),' (kg/m'^2~')')))+
+  scale_color_manual(values=group_color)+
+  scale_fill_manual(values=group_color)+
+  scale_x_discrete(limits = c('0mon', '6mon', '','18mon'), 
+                   breaks = c('0mon', '6mon', '12mon','18mon'),
+                   labels=c('0', '6', '','18'))+
+  theme_classic()+
+  theme(axis.title.y = element_text(size=15),
+        axis.title.x = element_text(size=15),
+        axis.text.y = element_text(size=15),
+        axis.text.x = element_text(size=15),
+        legend.position="none",
+        plot.title = element_text(hjust = 0.5,size=15),
+        plot.subtitle = element_text(hjust = 0,size=15));p1
+
+
+#Triglycerides
+out='Triglycerides'
+
+p2=ggplot(data,aes(x=Time,y=Triglycerides,group=sno,color=Group,fill=Group))+
+  geom_point(size=2)+geom_line(alpha=0.9,size=1)+
+  stat_summary(fun=mean, geom='point', alpha=1,size=3,aes_string(group='Group0'),color='#c03546') +
+  stat_summary(fun=mean, geom='line', size=1,aes_string(group='Group0'),color='#c03546') + 
+  labs(y='',x='Time (Month)',title=bquote(paste(.(out),' (mg/dL'~')')))+
+  scale_color_manual(values=group_color)+
+  scale_fill_manual(values=group_color)+
+  scale_x_discrete(limits = c('0mon', '6mon', '','18mon'), 
+                   breaks = c('0mon', '6mon', '12mon','18mon'),
+                   labels=c('0', '6', '','18'))+
+  theme_classic()+
+  theme(axis.title.y = element_text(size=15),
+        axis.title.x = element_text(size=15),
+        axis.text.y = element_text(size=15),
+        axis.text.x = element_text(size=15),
+        legend.position="none",
+        plot.title = element_text(hjust = 0.5,size=15),
+        plot.subtitle = element_text(hjust = 0,size=15));p2
+
+#TC_HDL
+out='TC_HDL'
+
+p3=ggplot(data,aes(x=Time,y=TC_HDL,group=sno,color=Group,fill=Group))+
+  geom_point(size=2)+geom_line(alpha=0.9,size=1)+
+  stat_summary(fun=mean, geom='point', alpha=1,size=3,aes_string(group='Group0'),color='#c03546') +
+  stat_summary(fun=mean, geom='line', size=1,aes_string(group='Group0'),color='#c03546') + 
+  labs(y='',x='Time (Month)',title='TC/HDLc ratio')+
+  scale_color_manual(values=group_color)+
+  scale_fill_manual(values=group_color)+
+  scale_x_discrete(limits = c('0mon', '6mon', '','18mon'), 
+                   breaks = c('0mon', '6mon', '12mon','18mon'),
+                   labels=c('0', '6', '','18'))+
+  theme_classic()+
+  theme(axis.title.y = element_text(size=15),
+        axis.title.x = element_text(size=15),
+        axis.text.y = element_text(size=15),
+        axis.text.x = element_text(size=15),
+        legend.position="none",
+        plot.title = element_text(hjust = 0.5,size=15),
+        plot.subtitle = element_text(hjust = 0,size=15));p3
+
+
+pdf("results/Overview/lipid_var_trend_sample.pdf",width = 15, height = 5, onefile = F)
+egg::ggarrange(p1,p2,p3,nrow=1)
+dev.off()
+
+#legend
+p3_lg=ggplot(data,aes(x=Time,y=TC_HDL,group=sno,color=Group,fill=Group))+
+  geom_point(size=2)+geom_line(alpha=0.9,linewidth=1)+
+  scale_color_manual(values=group_color)+
+  scale_fill_manual(values=group_color)+
+  scale_x_discrete(limits = c('0mon', '6mon', '','18mon'), 
+                   breaks = c('0mon', '6mon', '12mon','18mon'),
+                   labels=c('0', '6', '','18'))+
+  theme_void()+
+  theme(legend.position="bottom",legend.title = element_text(size = 15),
+        legend.text = element_text(size = 15,hjust=0),
+        legend.key.spacing.x = unit(0.2,'cm'),
+        plot.subtitle = element_text(hjust = 0,size=15));p3_lg
+
+pdf("results/Overview/lipid_var_trend_sample_lg.pdf",width = 5, height =0.5, onefile = F)
+grid.draw(ggpubr::get_legend(p3_lg))
+dev.off()
 
 
